@@ -120,7 +120,7 @@ exports.handler = async (req, resp, context) => {
                 agentID = xmlResponse.xml.AgentID.text();
 
                 if (msgType === "event" && xmlResponse.xml.Event.text() === "click") {
-                    userSendContent = "#clear"
+                    userSendContent = "/clear"
                     return;
                 }
                 //支持进入事件

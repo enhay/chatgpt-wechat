@@ -85,6 +85,7 @@ func (m *defaultChatModel) FindOne(ctx context.Context, id int64) (*Chat, error)
 }
 
 func (m *defaultChatModel) Insert(ctx context.Context, data *Chat) (sql.Result, error) {
+	 return nil,nil
 	chatIdKey := fmt.Sprintf("%s%v", cacheChatIdPrefix, data.Id)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?)", m.table, chatRowsExpectAutoSet)

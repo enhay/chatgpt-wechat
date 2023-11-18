@@ -244,7 +244,7 @@ func (l *ChatLogic) Chat(req *types.ChatReq) (resp *types.ChatReply, err error) 
 					if err != nil {
 						errInfo := err.Error()
 						if strings.Contains(errInfo, "maximum context length") {
-							errInfo += "\n 请使用 #clear 清理所有上下文"
+							errInfo += "\n 请使用 /clear 清理所有上下文"
 						}
 						sendToUser(req.AgentID, req.UserID, "系统错误:"+err.Error(), l.svcCtx.Config)
 						return
@@ -266,7 +266,7 @@ func (l *ChatLogic) Chat(req *types.ChatReq) (resp *types.ChatReply, err error) 
 					if !ok {
 						// 数据接受完成
 						if len(rs) > 0 {
-							go sendToUser(req.AgentID, req.UserID, string(rs)+"\n--------------------------------\n"+req.MSG, l.svcCtx.Config)
+							go sendToUser(req.AgentID, req.UserID, string(rs)+"\n", l.svcCtx.Config)
 						}
 						return
 					}
@@ -293,7 +293,7 @@ func (l *ChatLogic) Chat(req *types.ChatReq) (resp *types.ChatReply, err error) 
 			if err != nil {
 				errInfo := err.Error()
 				if strings.Contains(errInfo, "maximum context length") {
-					errInfo += "\n 请使用 #clear 清理所有上下文"
+					errInfo += "\n 请使用 /clear 清理所有上下文"
 				}
 				sendToUser(req.AgentID, req.UserID, "系统错误:"+err.Error(), l.svcCtx.Config)
 				return
@@ -304,12 +304,12 @@ func (l *ChatLogic) Chat(req *types.ChatReq) (resp *types.ChatReply, err error) 
 			collection.Set("", messageText, true)
 
 			// 再去插入数据
-			_, _ = l.svcCtx.ChatModel.Insert(context.Background(), &model.Chat{
-				AgentId:    req.AgentID,
-				User:       req.UserID,
-				ReqContent: req.MSG,
-				ResContent: messageText,
-			})
+			// _, _ = l.svcCtx.ChatModel.Insert(context.Background(), &model.Chat{
+			// 	AgentId:    req.AgentID,
+			// 	User:       req.UserID,
+			// 	ReqContent: req.MSG,
+			// 	ResContent: messageText,
+			// })
 		}()
 	}
 
@@ -354,7 +354,7 @@ func (l *ChatLogic) setBasePrompt(agentID int64) (ls *ChatLogic) {
 		}
 	}
 	if p == "" {
-		p = "你是 ChatGPT, 一个由 OpenAI 训练的大型语言模型, 你旨在回答并解决人们的任何问题，并且可以使用多种语言与人交流。\n"
+		p = "You are a helpful assistant.\n"
 	}
 	l.basePrompt = p
 	return l
@@ -363,26 +363,22 @@ func (l *ChatLogic) setBasePrompt(agentID int64) (ls *ChatLogic) {
 func (l *ChatLogic) FactoryCommend(req *types.ChatReq) (proceed bool, err error) {
 	template := make(map[string]TemplateData)
 	//当 message 以 # 开头时，表示是特殊指令
-	if !strings.HasPrefix(req.MSG, "#") {
+
+	if !strings.HasPrefix(req.MSG, "/") && !strings.HasPrefix(req.MSG, "#") {
 		return true, nil
 	}
 
-	template["#clear"] = CommendClear{}
-	template["#session"] = CommendSession{}
-	template["#config_prompt:"] = CommendConfigPrompt{}
-	template["#config_model:"] = CommendConfigModel{}
-	template["#config_clear"] = CommendConfigClear{}
+	template["/clear"] = CommendClear{}
+	template["/model:"] = CommendConfigModel{}
+	template["/reset"] = CommendConfigClear{}
 	template["#help"] = CommendHelp{}
 	template["#image"] = CommendImage{}
 	template["#voice"] = CommendVoice{}
-	template["#draw"] = CommendDraw{}
+	template["/draw"] = CommendDraw{}
+	template["/绘画"] = CommendDraw{}
 	template["#prompt:list"] = CommendPromptList{}
 	template["#prompt:set:"] = CommendPromptSet{}
-	template["#system"] = CommendSystem{}
 	template["#welcome"] = CommendWelcome{}
-	template["#about"] = CommendAbout{}
-	template["#usage"] = CommendUsage{}
-	template["#plugin"] = CommendPlugin{}
 
 	for s, data := range template {
 		if strings.HasPrefix(req.MSG, s) {
@@ -436,27 +432,14 @@ type CommendHelp struct{}
 
 func (p CommendHelp) exec(l *ChatLogic, req *types.ChatReq) bool {
 	tips := fmt.Sprintf(
-		"支持指令：\n\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
+		"支持指令：\n\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
 		"基础模块🕹️\n\n#help       查看所有指令",
-		"#system 查看会话系统信息",
-		"#usage 查看额度使用情况\n#usage:sk-xxx 查看指定 key 的使用情况",
-		"#clear 清空当前会话的数据",
-		"\n会话设置🦄\n\n#config_prompt:xxx，如程序员的小助手",
-		"#config_model:xxx，如gpt-3.5-turbo-16k",
-		"#config_clear 初始化对话设置",
-		"#prompt:list 查看所有支持的预定义角色",
-		"#prompt:set:xx 如 24(诗人)，角色应用",
-		"\n会话控制🚀\n",
-		"#session:start 开启新的会话",
-		"#session:list    查看所有会话\n#session:clear 清空所有会话",
-		"#session:export:json 导出当前会话数据为json\n#session:export:txt 导出当前会话数据为txt",
-		"#session:exchange:xxx 切换指定会话",
+		"\n会话设置🦄\n",
+		"/clear 清空当前会话的上下文",
+		"/model:xxx，如gpt-4",
+		"/reset 初始化对话设置",
 		"\n绘图🎨\n",
-		"#draw:xxx 按照指定 prompt 进行绘画",
-		"\n插件🛒\n",
-		"#plugin:list 查看所有插件",
-		//"#plugin:enable:xxx 启用指定插件\n",
-		//"#plugin:disable:xxx 禁用指定插件\n",
+		"/draw:xxx 按照指定 prompt 进行绘画",
 	)
 	sendToUser(req.AgentID, req.UserID, tips, l.svcCtx.Config)
 	return false
@@ -512,12 +495,16 @@ func (p CommendConfigPrompt) exec(l *ChatLogic, req *types.ChatReq) bool {
 type CommendConfigModel struct{}
 
 func (p CommendConfigModel) exec(l *ChatLogic, req *types.ChatReq) bool {
-	msg := strings.Trim(strings.Replace(req.MSG, "#config_model:", "", -1), " ")
+	msg := strings.Trim(strings.Replace(req.MSG, "/model:", "", -1), " ")
 
 	if msg == "" {
-		sendToUser(req.AgentID, req.UserID, "请输入完整的设置 如：\n#config_model:gpt-3.5-turbo", l.svcCtx.Config)
+		sendToUser(req.AgentID, req.UserID, "请输入完整的设置 如：\n/model:gpt-3.5-turbo", l.svcCtx.Config)
 		return false
 	}
+
+	openai.NewUserContext(
+		openai.GetUserUniqueID(req.UserID, strconv.FormatInt(req.AgentID, 10)),
+	).Clear()
 
 	if _, ok := openai.Models[msg]; !ok {
 		tips := fmt.Sprintf("目前只支持以下%d种模型：\n", len(openai.Models))
@@ -557,6 +544,9 @@ func (p CommendConfigClear) exec(l *ChatLogic, req *types.ChatReq) bool {
 	for _, val := range collection {
 		_ = l.svcCtx.ChatConfigModel.Delete(context.Background(), val.Id)
 	}
+	openai.NewUserContext(
+		openai.GetUserUniqueID(req.UserID, strconv.FormatInt(req.AgentID, 10)),
+	).Clear()
 	sendToUser(req.AgentID, req.UserID, "对话设置已恢复初始化", l.svcCtx.Config)
 	return false
 }
@@ -807,8 +797,8 @@ func (p CommendSession) exec(l *ChatLogic, req *types.ChatReq) bool {
 type CommendDraw struct{}
 
 func (p CommendDraw) exec(l *ChatLogic, req *types.ChatReq) bool {
-	if strings.HasPrefix(req.MSG, "#draw:") {
-		prompt := strings.Replace(req.MSG, "#draw:", "", -1)
+	if strings.HasPrefix(req.MSG, "/draw:") {
+		prompt := strings.Replace(req.MSG, "/draw:", "", -1)
 		if l.svcCtx.Config.Draw.Enable {
 			go func() {
 				var d draw.Draw
@@ -820,6 +810,7 @@ func (p CommendDraw) exec(l *ChatLogic, req *types.ChatReq) bool {
 					)
 				} else if l.svcCtx.Config.Draw.Company == draw.OPENAI {
 					d = openai.NewOpenaiDraw(
+						l.svcCtx.Config.Draw.OpenAi.Host,
 						l.svcCtx.Config.Draw.OpenAi.Key,
 						l.svcCtx.Config.Draw.OpenAi.Proxy,
 					)
@@ -830,7 +821,8 @@ func (p CommendDraw) exec(l *ChatLogic, req *types.ChatReq) bool {
 				// 如果 prompt 中包含中文，将 中文 prompt 通过 openai 转换为英文
 				// 如何判断 prompt 中是否包含中文？
 				// 通过正则匹配，如果匹配到中文，则进行转换
-				if regexp.MustCompile("[\u4e00-\u9fa5]").MatchString(prompt) {
+				// 忽略中文转换,看看效果
+				if regexp.MustCompile("[\u4e00-\u9fa5]").MatchString(prompt) && 1 == 2 {
 					// openai client
 					c := openai.NewChatClient(l.svcCtx.Config.OpenAi.Key).
 						WithModel(l.model).

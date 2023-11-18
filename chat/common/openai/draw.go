@@ -2,7 +2,6 @@ package openai
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fishtailstudio/imgo"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	copenai "github.com/sashabaranov/go-openai"
@@ -24,9 +24,9 @@ type Draw struct {
 	Proxy  string
 }
 
-func NewOpenaiDraw(key, proxy string) *Draw {
+func NewOpenaiDraw(host, key, proxy string) *Draw {
 	return &Draw{
-		Host:   "https://api.openai.com",
+		Host:   host,
 		APIKey: key,
 		Proxy:  proxy,
 	}
@@ -46,25 +46,21 @@ func (od *Draw) Txt2Img(prompt string, ch chan string) error {
 	imgReq := copenai.ImageRequest{
 		Prompt:         prompt,
 		N:              1,
-		Size:           copenai.CreateImageSize512x512,
+		Model:          copenai.CreateImageModelDallE3,
+		Size:           copenai.CreateImageSize1024x1024,
+		Style:          copenai.CreateImageStyleVivid,
 		ResponseFormat: copenai.CreateImageResponseFormatB64JSON,
 	}
 
-	image, err := cli.CreateImage(context.Background(), imgReq)
+	imageRes, err := cli.CreateImage(context.Background(), imgReq)
 	if err != nil {
 		return err
 	}
 
 	// 读取
-	if len(image.Data) > 0 {
-		s := image.Data[0].B64JSON
+	if len(imageRes.Data) > 0 {
 
-		imageBase64 := strings.Split(s, ",")[0]
-		decodeBytes, err := base64.StdEncoding.DecodeString(imageBase64)
-		if err != nil {
-			logx.Info("draw request fail", err)
-			return errors.New("绘画请求响应Decode失败，请重新尝试~")
-		}
+		imageBase64 := "data:image/png;base64," + imageRes.Data[0].B64JSON
 
 		// 判断目录是否存在
 		_, err = os.Stat("/tmp/image")
@@ -76,14 +72,10 @@ func (od *Draw) Txt2Img(prompt string, ch chan string) error {
 			}
 		}
 
+		// 创建一个新的文件
 		path := fmt.Sprintf("/tmp/image/%s.png", uuid.New().String())
 
-		err = os.WriteFile(path, decodeBytes, os.ModePerm)
-
-		if err != nil {
-			logx.Info("draw save fail", err)
-			return errors.New("绘画请求响应保存失败，请重新尝试~")
-		}
+		imgo.Load(imageBase64).Save(path)
 
 		// 再将 image 信息发送到用户
 		ch <- path

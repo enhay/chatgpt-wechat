@@ -222,13 +222,13 @@ func (l *CustomerChatLogic) CustomerChat(req *types.CustomerChatReq) (resp *type
 				}
 				collection.Set("", messageText, true)
 				// 再去插入数据
-				_, _ = l.svcCtx.ChatModel.Insert(context.Background(), &model.Chat{
-					User:       req.CustomerID,
-					OpenKfId:   req.OpenKfID,
-					MessageId:  req.MsgID,
-					ReqContent: req.Msg,
-					ResContent: messageText,
-				})
+				// _, _ = l.svcCtx.ChatModel.Insert(context.Background(), &model.Chat{
+				// 	User:       req.CustomerID,
+				// 	OpenKfId:   req.OpenKfID,
+				// 	MessageId:  req.MsgID,
+				// 	ReqContent: req.Msg,
+				// 	ResContent: messageText,
+				// })
 			}()
 
 			var rs []rune
@@ -240,7 +240,7 @@ func (l *CustomerChatLogic) CustomerChat(req *types.CustomerChatReq) (resp *type
 					// 数据接受完成
 					if len(rs) > 0 {
 						go sendToUser(req.OpenKfID, req.CustomerID,
-							string(rs)+"\n--------------------------------\n"+req.Msg,
+							string(rs)+"\n",
 							l.svcCtx.Config,
 						)
 					}
@@ -326,7 +326,7 @@ func (l *CustomerChatLogic) FactoryCommend(req *types.CustomerChatReq) (proceed 
 	template["#voice"] = CustomerCommendVoice{}
 	template["#help"] = CustomerCommendHelp{}
 	template["#system"] = CustomerCommendSystem{}
-	template["#clear"] = CustomerCommendClear{}
+	template["/clear"] = CustomerCommendClear{}
 	template["#about"] = CustomerCommendAbout{}
 	template["#plugin"] = CustomerPlugin{}
 
@@ -433,12 +433,9 @@ type CustomerCommendHelp struct{}
 
 func (p CustomerCommendHelp) customerExec(l *CustomerChatLogic, req *types.CustomerChatReq) bool {
 	tips := fmt.Sprintf(
-		"支持指令：\n\n%s\n%s\n%s\n%s\n%s\n",
+		"支持指令：\n\n%s\n%s\n",
 		"基础模块🕹️\n\n#help       查看所有指令",
-		"#system 查看会话系统信息",
-		"#clear 清空当前会话的数据",
-		"\n插件🛒\n",
-		"#plugin:list 查看所有插件",
+		"/clear 清空当前会话的数据",
 	)
 	sendToUser(req.OpenKfID, req.CustomerID, tips, l.svcCtx.Config)
 	return false

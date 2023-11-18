@@ -7,7 +7,7 @@
 #system 查看会话系统信息
 #usage 查看额度使用情况
 #usage:sk-xxx 查看指定 key 的使用情况
-#clear 清空当前会话的数据
+/clear 清空当前会话的数据
 
 会话设置🦄
 #config_prompt:xxx，如程序员的小助手
@@ -25,7 +25,7 @@
 #session:exchange:xxx 切换指定会话
 
 绘图
-#draw:xxx 按照指定 prompt 进行绘画
+/draw:xxx 按照指定 prompt 进行绘画
 
 插件🛒
 #plugin:list 查看所有插件
@@ -41,16 +41,16 @@
 ### `#usage:sk-xxx` 查看指定 key 的使用情况
 ![img_6.png](img_6.png)
 - 在应用消息中 发送 `#usage:sk-P8OUnFOUJ8xxxxxxxxxxxxxh1b6sEQgbru1` 查询其它 key 的使用额度
-### `#clear` 清空当前会话的上下文数据
+### `/clear` 清空当前会话的上下文数据
 ![image43.png](image43.png)
-- 因为默认会加载上下文，之前的话题可能会影响到当前的对话，这个时候可以通过 `#clear` 清空上下文，重新开始对话
+- 因为默认会加载上下文，之前的话题可能会影响到当前的对话，这个时候可以通过 `/clear` 清空上下文，重新开始对话
 - 也可以通过 `#session:start` 开启新的会话，这样就能保证上下文的干净
-- 对于部分异常情况，也可以通过 `#clear` 清空上下文，重新开始对话
+- 对于部分异常情况，也可以通过 `/clear` 清空上下文，重新开始对话
 
 ## 绘图
-### `#draw:xxx` 按照指定 prompt 进行绘画
-- 比如 `#draw:cat dress hanfu`，它就会会绘制一只穿着汉服的猫咪
-- 当然中文也是支持的哦 `#draw:一只穿着汉服的猫咪`
+### `/draw:xxx` 按照指定 prompt 进行绘画
+- 比如 `/draw:cat dress hanfu`，它就会会绘制一只穿着汉服的猫咪
+- 当然中文也是支持的哦 `/draw:一只穿着汉服的猫咪`
 
 - 如果你设置了 绘画服务为 stable_diffusion ，完全可以把从C站复制的参数直接粘贴进去，比如下面这样
 ![img.png](img.png)
